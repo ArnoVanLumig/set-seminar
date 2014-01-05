@@ -11,11 +11,15 @@ def run(commit):
 	commitsToDo.add(commit)
 
 	while commitsToDo:
+		print(len(commitsToDo))
 		top = commitsToDo.pop()
 		parents = top.parents
 
 		for par in parents:
-			compareCommits(par, top)
+			cmpRes = compareCommits(par, top)
+			for c in cmpRes:
+				yield c
+
 			if par not in commitsDone:
 				commitsToDo.add(par)
 
@@ -42,31 +46,53 @@ def compareCommits(com_a, com_b):
 		#print(diff.b_blob.path, diff.a_blob.path)
 
 		parsedDiff = list(parseDiff(difftxt))
-		for x in parsedDiff:
-			print(x)
+		# for x in parsedDiff:
+		# 	print(x)
 
 		# get blame info
-		blame = repo.blame(rev, difffile)
-		expBlame = list(expandBlame(blame))
+		try:
+			blame = repo.blame(rev, difffile)
+			expBlame = list(expandBlame(blame))
+		except:
+			continue
 
-		for x in expBlame:
-			print(x)
+		# for x in expBlame:
+		# 	print(x)
 
 		#print("blame length at rev " + rev + " is: " + str(len(expBlame)) + " " + difffile)
 
 		for line in parsedDiff:
 			lineNo = line['line'] # lineNo is 1-indexed
 
-			if(lineNo >= len(expBlame)):
+			if(lineNo - 1 >= len(expBlame)):
 				print("line number is " + str(lineNo) + "\nblame length is " + str(len(expBlame)))
 				continue
 
 			change = line['change']
 
 			if change == '-':
-				author = expBlame[lineNo - 1][0].author
+				author = expBlame[lineNo - 1][0].author # author of the line that was just deleted
+
+				res = {}
+				res['type'] = "-"
+				res['deleterName'] = com_b.author
+				res['deleteeName'] = author
+				res['lineNo'] = lineNo
+				res['deletingCommitHash'] = com_a.hexsha
+				res['deletedCommitHash'] = com_b.hexsha
+				res['fileName'] = difffile
+				yield res
+
 				print("author %s deleted line %s in file %s that was originally by author %s" % (str(com_b.author), str(lineNo), str(difffile), str(author)))
 			else:
+				res = {}
+				res['type'] = "-"
+				res['inserterName'] = com_b.author
+				res['commitHash'] = com_b.hexsha
+				res['fileName'] = difffile
+				res['lineNo'] = lineNo
+				yield res
+
 				print("author %s added line %s in file %s" % (str(com_b.author), str(lineNo), str(difffile)))
 
 # blame is a list [git.Commit, list: [<line>]]
@@ -144,11 +170,10 @@ def parseDiff(diff):
 		i += 1
 
 start = time.time()
-repo = Repo("~/Documents/5 1B/Seminar/testrepo")
+repo = Repo("rethinkdb")
 latestCommit = repo.head.commit
-#otherCommit = latestCommit.parents[0]
-#compareCommits(latestCommit, otherCommit)
-run(latestCommit)
+res = list(run(latestCommit))
+pickle.dump(res, "pickleOut")
 end = time.time()
 
 print(end - start)
