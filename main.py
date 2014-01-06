@@ -2,13 +2,16 @@ from git import *
 import re
 import time
 
-import pickle
+import psycopg2
+
+conn = psycopg2.connect(database="seminar", user="arno", password="seminar", host="127.0.0.1")
 
 def run(commit):
 	commitsToDo = set()
 	commitsDone = set()
 
 	commitsToDo.add(commit)
+	saveCommitToDb(commit)
 
 	while commitsToDo:
 		print(len(commitsToDo))
@@ -16,14 +19,49 @@ def run(commit):
 		parents = top.parents
 
 		for par in parents:
-			cmpRes = compareCommits(par, top)
-			for c in cmpRes:
-				yield c
+			cmpRes = list(compareCommits(par, top))
 
 			if par not in commitsDone:
+				saveCommitToDb(par)
 				commitsToDo.add(par)
 
+			saveChangesToDb(cmpRes)
+
 		commitsDone.add(top)
+
+def saveCommitToDb(commit):
+	cur = conn.cursor()
+	query = "insert into commits (hexsha, author, date) select %s, %s, %s where not exists (select id from commits where hexsha = %s)"
+	cur.execute(query, (commit.hexsha, str(commit.author), commit.authored_date, commit.hexsha))
+	conn.commit()
+
+def saveChangesToDb(cmpres):
+	print(cmpres)
+
+	insertQuery = "insert into inserts (commit, filename, lineno) values (\
+		(select id from commits where hexsha = %s),\
+		%s,\
+		%s)"
+
+	deleteQuery = "insert into deletes (deletingcommit, deletedcommit, filename, lineno) values (\
+		(select id from commits where hexsha = %s),\
+		(select id from commits where hexsha = %s),\
+		%s,\
+		%s)"
+
+	inserts = filter(lambda x: x['type'] == '+', cmpres)
+	deletes = filter(lambda x: x['type'] == '-', cmpres)
+
+	print(inserts)
+	print(deletes)
+
+	insertPars = map(lambda x: (x['commitHash'], x['fileName'], x['lineNo']), inserts)
+	deletePars = map(lambda x: (x['deletingCommitHash'], x['deletedCommitHash'], x['fileName'], x['lineNo']), deletes)
+
+	cur = conn.cursor()
+	cur.executemany(insertQuery, insertPars)
+	cur.executemany(deleteQuery, deletePars)
+	conn.commit()
 
 # what changes were made to get from com_a to com_b?
 def compareCommits(com_a, com_b):
@@ -32,7 +70,6 @@ def compareCommits(com_a, com_b):
 	diffs = com_a.diff(com_b, create_patch=True)
 
 	rev = com_a.hexsha
-	#print(com_b.hexsha, com_a.hexsha)
 
 	for diff in diffs:
 		if diff.a_blob == None or diff.b_blob == None:
@@ -43,11 +80,7 @@ def compareCommits(com_a, com_b):
 		difftxt = diff.diff
 		difffile = diff.b_blob.path
 
-		#print(diff.b_blob.path, diff.a_blob.path)
-
 		parsedDiff = list(parseDiff(difftxt))
-		# for x in parsedDiff:
-		# 	print(x)
 
 		# get blame info
 		try:
@@ -55,11 +88,6 @@ def compareCommits(com_a, com_b):
 			expBlame = list(expandBlame(blame))
 		except:
 			continue
-
-		# for x in expBlame:
-		# 	print(x)
-
-		#print("blame length at rev " + rev + " is: " + str(len(expBlame)) + " " + difffile)
 
 		for line in parsedDiff:
 			lineNo = line['line'] # lineNo is 1-indexed
@@ -75,8 +103,8 @@ def compareCommits(com_a, com_b):
 
 				res = {}
 				res['type'] = "-"
-				res['deleterName'] = com_b.author
-				res['deleteeName'] = author
+				#res['deleterName'] = com_b.author.email
+				#res['deleteeName'] = author.email
 				res['lineNo'] = lineNo
 				res['deletingCommitHash'] = com_a.hexsha
 				res['deletedCommitHash'] = com_b.hexsha
@@ -86,8 +114,8 @@ def compareCommits(com_a, com_b):
 				print("author %s deleted line %s in file %s that was originally by author %s" % (str(com_b.author), str(lineNo), str(difffile), str(author)))
 			else:
 				res = {}
-				res['type'] = "-"
-				res['inserterName'] = com_b.author
+				res['type'] = "+"
+				#res['inserterName'] = com_b.author.email
 				res['commitHash'] = com_b.hexsha
 				res['fileName'] = difffile
 				res['lineNo'] = lineNo
@@ -172,8 +200,7 @@ def parseDiff(diff):
 start = time.time()
 repo = Repo("rethinkdb")
 latestCommit = repo.head.commit
-res = list(run(latestCommit))
-pickle.dump(res, "pickleOut")
+run(latestCommit)
 end = time.time()
 
 print(end - start)
