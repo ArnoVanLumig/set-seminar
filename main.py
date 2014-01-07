@@ -36,8 +36,6 @@ def saveCommitToDb(commit):
 	conn.commit()
 
 def saveChangesToDb(cmpres):
-	print(cmpres)
-
 	insertQuery = "insert into inserts (commit, filename, lineno) values (\
 		(select id from commits where hexsha = %s),\
 		%s,\
@@ -51,9 +49,6 @@ def saveChangesToDb(cmpres):
 
 	inserts = filter(lambda x: x['type'] == '+', cmpres)
 	deletes = filter(lambda x: x['type'] == '-', cmpres)
-
-	print(inserts)
-	print(deletes)
 
 	insertPars = map(lambda x: (x['commitHash'], x['fileName'], x['lineNo']), inserts)
 	deletePars = map(lambda x: (x['deletingCommitHash'], x['deletedCommitHash'], x['fileName'], x['lineNo']), deletes)
