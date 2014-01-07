@@ -4,6 +4,8 @@ import time
 
 import psycopg2
 
+reponame = "tinymce"
+
 conn = psycopg2.connect(database="seminar", user="arno", password="seminar", host="127.0.0.1")
 
 def run(commit):
@@ -31,8 +33,8 @@ def run(commit):
 
 def saveCommitToDb(commit):
 	cur = conn.cursor()
-	query = "insert into commits (hexsha, author, date) select %s, %s, %s where not exists (select id from commits where hexsha = %s)"
-	cur.execute(query, (commit.hexsha, str(commit.author), commit.authored_date, commit.hexsha))
+	query = "insert into commits (hexsha, author, date, project) select %s, %s, %s, %s where not exists (select id from commits where hexsha = %s)"
+	cur.execute(query, (commit.hexsha, str(commit.author), commit.authored_date, reponame, commit.hexsha))
 	conn.commit()
 
 def saveChangesToDb(cmpres):
@@ -193,7 +195,7 @@ def parseDiff(diff):
 		i += 1
 
 start = time.time()
-repo = Repo("rethinkdb")
+repo = Repo(reponame)
 latestCommit = repo.head.commit
 run(latestCommit)
 end = time.time()

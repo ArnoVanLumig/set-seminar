@@ -1,8 +1,9 @@
 import psycopg2
+import json
 
 query = "select c1.author as deletingAuthor, c2.author as deletedAuthor, count(deletes.id) as count from deletes \
-inner join commits as c1 on deletes.deletedcommit = c1.id \
-inner join commits as c2 on deletes.deletingcommit = c2.id \
+inner join commits as c1 on deletes.deletingcommit = c1.id \
+inner join commits as c2 on deletes.deletedcommit = c2.id \
 group by c1.author, c2.author \
 having count(deletes.id) > 10 \
 order by count desc;"
@@ -30,17 +31,28 @@ for r in res:
 
 authors.sort(key=lambda a: authorsDict[a], reverse=True)
 
-matrix = [ [0 for y in range(len(authors))] for x in range(len(authors))]
+jsonRes = {}
+jsonRes['nodes'] = map(lambda x: {"name": x}, authors) # put in dictionaries
 
-for r in res:
-	a1 = authors.index(r[0])
-	a2 = authors.index(r[1])
+links = []
+for a1 in range(len(authors)):
+	for a2 in range(a1):
+		auth1 = authors[a1]
+		auth2 = authors[a2]
 
-	matrix[a1][a2] = r[2]
+		cnt = 0
+		for r in res:
+			if (r[0] == auth1 and r[1] == auth2) or (r[1] == auth1 and r[0] == auth2):
+				cnt += r[2]
 
-print(";" + ";".join(authors))
-i = 0
-for row in matrix:
-	rowstr = map(lambda x: str(x), row)
-	print(authors[i] + ";" + ";".join(rowstr))
-	i += 1
+		if cnt < 1000:
+			continue
+
+		link = {}
+		link['source'] = a1
+		link['target'] = a2
+		link['value'] = cnt
+		links.append(link)
+jsonRes['links'] = links
+
+print json.dumps(jsonRes, indent=4)
