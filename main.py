@@ -32,10 +32,10 @@ def run(commit):
 		commitsDone.add(top)
 
 def saveCommitToDb(commit):
-    cur = conn.cursor()
-    query = "insert into commits (hexsha, author, date, project) select %s, %s, %s, %s where not exists (select id from commits where hexsha = %s)"
-    cur.execute(query, (commit.hexsha, commit.author.name.encode("utf-8"), commit.authored_date, reponame, commit.hexsha))
-    conn.commit()
+	cur = conn.cursor()
+	query = "insert into commits (hexsha, author, date, project) select %s, %s, %s, %s where not exists (select id from commits where hexsha = %s)"
+	cur.execute(query, (commit.hexsha, commit.author.name.encode("utf-8"), commit.authored_date, reponame, commit.hexsha))
+	conn.commit()
 
 def saveChangesToDb(cmpres):
 	insertQuery = "insert into inserts (commit, filename, lineno) values (\
@@ -96,24 +96,24 @@ def compareCommits(com_a, com_b):
 			change = line['change']
 
 			if change == '-':
-                            prevcommit = expBlame[lineNo - 1][0]
-                            saveCommitToDb(prevcommit)
-			    author = prevcommit.author.name # author of the line that was just deleted
+				prevcommit = expBlame[lineNo - 1][0]
+				saveCommitToDb(prevcommit)
+				author = prevcommit.author.name # author of the line that was just deleted
 
-			    res = {}
-			    res['type'] = "-"
-			    res['lineNo'] = lineNo
-			    res['deletingCommitHash'] = com_b.hexsha
-		            res['deletedCommitHash'] = prevcommit.hexsha
-			    res['fileName'] = difffile
-			    yield res
+				res = {}
+				res['type'] = "-"
+				res['lineNo'] = lineNo
+				res['deletingCommitHash'] = com_b.hexsha
+				res['deletedCommitHash'] = prevcommit.hexsha
+				res['fileName'] = difffile
+				yield res
 			else:
-			    res = {}
-			    res['type'] = "+"
-			    res['commitHash'] = com_b.hexsha
-			    res['fileName'] = difffile
-		    	    res['lineNo'] = lineNo
-			    yield res
+				res = {}
+				res['type'] = "+"
+				res['commitHash'] = com_b.hexsha
+				res['fileName'] = difffile
+				res['lineNo'] = lineNo
+				yield res
 
 # blame is a list [git.Commit, list: [<line>]]
 # the result of this function is a list [git.Commit, line]
