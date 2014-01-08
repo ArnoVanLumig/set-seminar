@@ -75,7 +75,7 @@ def compareCommits(com_a, com_b):
 
 		# extract and parse the diff text
 		difftxt = diff.diff
-		difffile = diff.b_blob.path
+		difffile = diff.a_blob.path
 
 		parsedDiff = list(parseDiff(difftxt))
 
