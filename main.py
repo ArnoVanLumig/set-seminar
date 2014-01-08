@@ -4,7 +4,7 @@ import time
 
 import psycopg2
 
-reponame = "tinymce"
+reponame = "reddit"
 
 conn = psycopg2.connect(database="seminar", user="arno", password="seminar", host="127.0.0.1")
 
@@ -32,10 +32,10 @@ def run(commit):
 		commitsDone.add(top)
 
 def saveCommitToDb(commit):
-	cur = conn.cursor()
-	query = "insert into commits (hexsha, author, date, project) select %s, %s, %s, %s where not exists (select id from commits where hexsha = %s)"
-	cur.execute(query, (commit.hexsha, str(commit.author), commit.authored_date, reponame, commit.hexsha))
-	conn.commit()
+    cur = conn.cursor()
+    query = "insert into commits (hexsha, author, date, project) select %s, %s, %s, %s where not exists (select id from commits where hexsha = %s)"
+    cur.execute(query, (commit.hexsha, commit.author.name.encode("utf-8"), commit.authored_date, reponame, commit.hexsha))
+    conn.commit()
 
 def saveChangesToDb(cmpres):
 	insertQuery = "insert into inserts (commit, filename, lineno) values (\
@@ -96,29 +96,24 @@ def compareCommits(com_a, com_b):
 			change = line['change']
 
 			if change == '-':
-				author = expBlame[lineNo - 1][0].author # author of the line that was just deleted
+                            prevcommit = expBlame[lineNo - 1][0]
+                            saveCommitToDb(prevcommit)
+			    author = prevcommit.author.name # author of the line that was just deleted
 
-				res = {}
-				res['type'] = "-"
-				#res['deleterName'] = com_b.author.email
-				#res['deleteeName'] = author.email
-				res['lineNo'] = lineNo
-				res['deletingCommitHash'] = com_a.hexsha
-				res['deletedCommitHash'] = com_b.hexsha
-				res['fileName'] = difffile
-				yield res
-
-				print("author %s deleted line %s in file %s that was originally by author %s" % (str(com_b.author), str(lineNo), str(difffile), str(author)))
+			    res = {}
+			    res['type'] = "-"
+			    res['lineNo'] = lineNo
+			    res['deletingCommitHash'] = com_b.hexsha
+		            res['deletedCommitHash'] = prevcommit.hexsha
+			    res['fileName'] = difffile
+			    yield res
 			else:
-				res = {}
-				res['type'] = "+"
-				#res['inserterName'] = com_b.author.email
-				res['commitHash'] = com_b.hexsha
-				res['fileName'] = difffile
-				res['lineNo'] = lineNo
-				yield res
-
-				print("author %s added line %s in file %s" % (str(com_b.author), str(lineNo), str(difffile)))
+			    res = {}
+			    res['type'] = "+"
+			    res['commitHash'] = com_b.hexsha
+			    res['fileName'] = difffile
+		    	    res['lineNo'] = lineNo
+			    yield res
 
 # blame is a list [git.Commit, list: [<line>]]
 # the result of this function is a list [git.Commit, line]
@@ -195,6 +190,16 @@ def parseDiff(diff):
 		i += 1
 
 start = time.time()
+cur = conn.cursor()
+
+cur.execute("delete from inserts where commit in (select id from commits where project = %s);", (reponame,))
+cur.execute("delete from deletes where deletingcommit in (select id from commits where project = %s);", (reponame,))
+cur.execute("delete from deletes where deletedcommit in (select id from commits where project = %s);", (reponame,))
+cur.execute("delete from commits where project = %s;", (reponame,))
+
+conn.commit()
+
+
 repo = Repo(reponame)
 latestCommit = repo.head.commit
 run(latestCommit)
