@@ -34,7 +34,7 @@ def run(commit):
 def saveCommitToDb(commit):
 	cur = conn.cursor()
 	query = "insert into commits (hexsha, author, date, project) select %s, %s, %s, %s where not exists (select id from commits where hexsha = %s)"
-	cur.execute(query, (commit.hexsha, commit.author.name.encode("utf-8"), commit.authored_date, reponame, commit.hexsha))
+	cur.execute(query, (commit.hexsha, commit.author.email, commit.authored_date, reponame, commit.hexsha))
 	conn.commit()
 
 def saveChangesToDb(cmpres):
@@ -98,7 +98,7 @@ def compareCommits(com_a, com_b):
 			if change == '-':
 				prevcommit = expBlame[lineNo - 1][0]
 				saveCommitToDb(prevcommit)
-				author = prevcommit.author.name # author of the line that was just deleted
+				author = prevcommit.author.email # author of the line that was just deleted
 
 				res = {}
 				res['type'] = "-"
