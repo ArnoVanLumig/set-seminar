@@ -64,13 +64,13 @@ def saveChangesToDb(cmpres):
 def compareCommits(com_a, com_b):
 	errors = 0
 
-	diffs = com_a.diff(com_b, create_patch=True)
+	diffs = com_a.diff(com_b, create_patch=True, w=True) # w=True means whitespace is ignored
 
 	rev = com_a.hexsha
 
 	for diff in diffs:
 		if diff.a_blob == None or diff.b_blob == None:
-			# new file, ignore
+			# new file or deleted file, ignore
 			continue
 
 		# extract and parse the diff text
@@ -89,13 +89,13 @@ def compareCommits(com_a, com_b):
 		for line in parsedDiff:
 			lineNo = line['line'] # lineNo is 1-indexed
 
-			if(lineNo - 1 >= len(expBlame)):
-				print("line number is " + str(lineNo) + "\nblame length is " + str(len(expBlame)))
-				continue
-
 			change = line['change']
 
 			if change == '-':
+				if(lineNo - 1 >= len(expBlame)):
+					print("line number is " + str(lineNo) + "\nblame length is " + str(len(expBlame)) + "\nwhen comparing file " + difffile + " between revision " + com_a.hexsha + " and revision " + com_b.hexsha)
+					raise Exception("blame wrong length")
+
 				prevcommit = expBlame[lineNo - 1][0]
 				saveCommitToDb(prevcommit)
 				author = prevcommit.author.email # author of the line that was just deleted

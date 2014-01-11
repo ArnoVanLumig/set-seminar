@@ -1,8 +1,10 @@
 import psycopg2
 
+reponame = "rails"
+
 query = "select c1.author as deletingAuthor, c2.author as deletedAuthor, count(deletes.id) as count from deletes \
 inner join commits as c1 on deletes.deletedcommit = c1.id \
-inner join commits as c2 on deletes.deletingcommit = c2.id \
+inner join commits as c2 on deletes.deletingcommit = c2.id where c2.project = %s \
 group by c1.author, c2.author \
 having count(deletes.id) > 10 \
 order by count desc;"
@@ -10,7 +12,7 @@ order by count desc;"
 conn = psycopg2.connect(database="seminar", user="arno", password="seminar", host="127.0.0.1")
 
 cur = conn.cursor()
-cur.execute(query)
+cur.execute(query, (reponame,))
 res = cur.fetchall()
 
 authors = set()
