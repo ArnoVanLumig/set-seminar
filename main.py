@@ -5,7 +5,7 @@ import time
 import psycopg2
 import redis
 
-reponame = "reddit"
+reponame = "rails_ram"
 
 conn = psycopg2.connect(database="seminar", user="arno", password="seminar", host="127.0.0.1")
 r = redis.StrictRedis(host='127.0.0.1', port=6379, db=0)
@@ -14,8 +14,8 @@ repo = Repo(reponame)
 
 def run():
 	while r.scard("commitsToDo_" + reponame) > 0:
-		print(".")
 		commitHash = r.spop("commitsToDo_" + reponame)
+                print(commitHash)
 		r.sadd("commitsDone_" + reponame, commitHash)
 
 		top = repo.commit(commitHash)

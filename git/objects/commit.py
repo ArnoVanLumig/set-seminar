@@ -424,13 +424,20 @@ class Commit(base.Object, Iterable, Diffable, Traversable, Serializable):
 		
 		self.author, self.authored_date, self.author_tz_offset = parse_actor_and_date(next_line)
 		self.committer, self.committed_date, self.committer_tz_offset = parse_actor_and_date(readline())
-		
-		
+
+		# we may now have the gpgsig line, the coding line, or an empty line followed by the optional message
+		line = readline().strip()
+		if line.startswith("gpgsig"):
+		    while line != "-----END PGP SIGNATURE-----":
+			line = readline().strip()
+		    enc = readline()
+		else:
+		    enc = line
+
 		# now we can have the encoding line, or an empty line followed by the optional
 		# message.
 		self.encoding = self.default_encoding
 		# read encoding or empty line to separate message
-		enc = readline()
 		enc = enc.strip()
 		if enc:
 			self.encoding = enc[enc.find(' ')+1:]
