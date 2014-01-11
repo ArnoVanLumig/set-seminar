@@ -19,16 +19,11 @@ def run():
 		r.sadd("commitsDone_" + reponame, commitHash)
 
 		top = repo.commit(commitHash)
-		saveCommitToDb(top)
 
 		parents = top.parents
 
 		for par in parents:
 			cmpRes = list(compareCommits(par, top))
-
-			if not r.sismember("commitsDone_" + reponame, par.hexsha):
-				saveCommitToDb(par)
-
 			saveChangesToDb(cmpRes)
 
 def buildQueue():
@@ -48,6 +43,7 @@ def buildQueue():
 	while len(commits) > 0:
 		com = commits.pop()
 		r.sadd("commitsToDo_" + reponame, com.hexsha)
+		saveCommitToDb(com)
 
 		for par in com.parents:
 			commits.add(par)
@@ -118,7 +114,6 @@ def compareCommits(com_a, com_b):
 					raise Exception("blame wrong length")
 
 				prevcommit = expBlame[lineNo - 1][0]
-				saveCommitToDb(prevcommit)
 				author = prevcommit.author.email # author of the line that was just deleted
 
 				res = {}
