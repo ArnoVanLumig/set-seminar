@@ -3,33 +3,54 @@ import re
 import time
 
 import psycopg2
+import redis
 
 reponame = "reddit"
 
 conn = psycopg2.connect(database="seminar", user="arno", password="seminar", host="127.0.0.1")
+r = redis.StrictRedis(host='127.0.0.1', port=6379, db=0)
 
-def run(commit):
-	commitsToDo = set()
-	commitsDone = set()
+repo = Repo(reponame)
 
-	commitsToDo.add(commit)
-	saveCommitToDb(commit)
+def run():
+	while r.scard("commitsToDo_" + reponame) > 0:
+		print(".")
+		commitHash = r.spop("commitsToDo_" + reponame)
+		r.sadd("commitsDone_" + reponame, commitHash)
 
-	while commitsToDo:
-		print(len(commitsToDo))
-		top = commitsToDo.pop()
+		top = repo.commit(commitHash)
+		saveCommitToDb(top)
+
 		parents = top.parents
 
 		for par in parents:
 			cmpRes = list(compareCommits(par, top))
 
-			if par not in commitsDone:
+			if not r.sismember("commitsDone_" + reponame, par.hexsha):
 				saveCommitToDb(par)
-				commitsToDo.add(par)
 
 			saveChangesToDb(cmpRes)
 
-		commitsDone.add(top)
+def buildQueue():
+	cur = conn.cursor()
+	cur.execute("delete from inserts where commit in (select id from commits where project = %s);", (reponame,))
+	cur.execute("delete from deletes where deletingcommit in (select id from commits where project = %s);", (reponame,))
+	cur.execute("delete from deletes where deletedcommit in (select id from commits where project = %s);", (reponame,))
+	cur.execute("delete from commits where project = %s;", (reponame,))
+	conn.commit()
+
+	r.delete("commitsToDo_" + reponame)
+	r.delete("commitsDone_" + reponame)
+
+	commits = set()
+	commits.add(repo.head.commit)
+
+	while len(commits) > 0:
+		com = commits.pop()
+		r.sadd("commitsToDo_" + reponame, com.hexsha)
+
+		for par in com.parents:
+			commits.add(par)
 
 def saveCommitToDb(commit):
 	cur = conn.cursor()
@@ -188,24 +209,6 @@ def parseDiff(diff):
 				break
 
 		i += 1
-
-start = time.time()
-cur = conn.cursor()
-
-cur.execute("delete from inserts where commit in (select id from commits where project = %s);", (reponame,))
-cur.execute("delete from deletes where deletingcommit in (select id from commits where project = %s);", (reponame,))
-cur.execute("delete from deletes where deletedcommit in (select id from commits where project = %s);", (reponame,))
-cur.execute("delete from commits where project = %s;", (reponame,))
-
-conn.commit()
-
-
-repo = Repo(reponame)
-latestCommit = repo.head.commit
-run(latestCommit)
-end = time.time()
-
-print(end - start)
 
 # thediff = """--- a/drivers/python/rethinkdb/_import.py
 # +++ b/drivers/python/rethinkdb/_import.py
