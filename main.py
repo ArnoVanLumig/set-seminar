@@ -38,15 +38,18 @@ def buildQueue():
 	r.delete("commitsDone_" + reponame)
 
 	commits = set()
+	commitsDone = set()
 	commits.add(repo.head.commit)
 
 	while len(commits) > 0:
 		com = commits.pop()
+		commitsDone.add(com)
 		r.sadd("commitsToDo_" + reponame, com.hexsha)
 		saveCommitToDb(com)
 
 		for par in com.parents:
-			commits.add(par)
+			if par not in commitsDone:
+				commits.add(par)
 
 def saveCommitToDb(commit):
 	cur = conn.cursor()
