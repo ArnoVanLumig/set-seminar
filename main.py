@@ -15,7 +15,7 @@ repo = Repo(reponame)
 def run():
 	while r.scard("commitsToDo_" + reponame) > 0:
 		commitHash = r.spop("commitsToDo_" + reponame)
-                print(commitHash)
+		print(commitHash)
 		r.sadd("commitsDone_" + reponame, commitHash)
 
 		top = repo.commit(commitHash)
