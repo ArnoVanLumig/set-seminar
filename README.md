@@ -89,8 +89,8 @@ File blacklisting query
 
 The below query produces a sorted list of the most-edited files with their edit count. This is useful for detecting files that should be blacklisted.
 
-  select filename, count(deletes.id) from deletes
-  inner join commits as c1 on c1.id = deletes.deletedcommit
-  where project = 'foo'
-  group by filename
-  order by count desc;
+    select filename, count(deletes.id) from deletes
+    inner join commits as c1 on c1.id = deletes.deletedcommit
+    where project = 'foo'
+    group by filename
+    order by count desc;
