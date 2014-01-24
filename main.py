@@ -101,7 +101,7 @@ def compareCommits(com_a, com_b):
 
 		# get blame info
 		try:
-			blame = repo.blame(rev, difffile)
+			blame = repo.blame(rev, difffile, w=True)
 			expBlame = list(expandBlame(blame))
 		except:
 			continue
