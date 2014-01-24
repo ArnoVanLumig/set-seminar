@@ -2,6 +2,7 @@ import psycopg2
 import json
 
 reponame = "rethinkdb"
+CNT_TRESHOLD = 100 # omit links with fewer than CNT_TRESHOLD edits
 
 filenameBlacklist = ["railties/doc/guides%%", "guides/%%", "%%jquery%%js", "%%CHANGELOG%%", "%%README%%", "%%COPYING%%", "%%LICENCE%%", "lib/%%", "external/%%", "bench/workloads/baseline/baseline-git/bench/stress-client/sqlite3.c", "admin/static/js%%", "bench/serializer-bench/lab_journal%%"]
 blacklistQuery = "and".join(map(lambda x: " filename not like '%s' " % x, filenameBlacklist))
@@ -48,7 +49,7 @@ for a1 in range(len(authors)):
 			if (r[0] == auth1 and r[1] == auth2) or (r[1] == auth1 and r[0] == auth2):
 				cnt += r[2]
 
-		if cnt < 100:
+		if cnt < CNT_TRESHOLD:
 			continue
 
 		link = {}
