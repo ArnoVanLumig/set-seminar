@@ -5,7 +5,7 @@ import time
 import psycopg2
 import redis
 
-reponame = "rails_ram"
+reponame = "rethinkdb"
 
 conn = psycopg2.connect(database="seminar", user="arno", password="seminar", host="127.0.0.1")
 r = redis.StrictRedis(host='127.0.0.1', port=6379, db=0)
@@ -34,6 +34,8 @@ def buildQueue():
 	cur.execute("delete from commits where project = %s;", (reponame,))
 	conn.commit()
 
+        print("deleted old data from db")
+
 	r.delete("commitsToDo_" + reponame)
 	r.delete("commitsDone_" + reponame)
 
@@ -45,17 +47,17 @@ def buildQueue():
 		com = commits.pop()
 		commitsDone.add(com)
 		r.sadd("commitsToDo_" + reponame, com.hexsha)
-		saveCommitToDb(com)
+		saveCommitToDb(com, cur)
 
 		for par in com.parents:
 			if par not in commitsDone:
 				commits.add(par)
 
-def saveCommitToDb(commit):
-	cur = conn.cursor()
-	query = "insert into commits (hexsha, author, date, project) select %s, %s, %s, %s where not exists (select id from commits where hexsha = %s)"
-	cur.execute(query, (commit.hexsha, commit.author.email, commit.authored_date, reponame, commit.hexsha))
-	conn.commit()
+        conn.commit()
+
+def saveCommitToDb(commit, cur):
+	query = "insert into commits (hexsha, author, date, project) select %s, %s, %s, %s where not exists (select id from commits where hexsha = %s and project = %s)"
+	cur.execute(query, (commit.hexsha, commit.author.email, commit.authored_date, reponame, commit.hexsha, reponame))
 
 def saveChangesToDb(cmpres):
 	insertQuery = "insert into inserts (commit, filename, lineno) values (\
