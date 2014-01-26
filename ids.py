@@ -1,18 +1,22 @@
 from git import *
 
-reponame = "reddit"
+reponame = "rails_ram"
 
 repo = Repo(reponame)
 
-commitqueue = [repo.head.commit]
+commitqueue = set([repo.head.commit])
+commitsDone = set()
 
 nameMap = {} # map author name to set of email addresses
 
 while commitqueue:
 	head = commitqueue.pop()
+        commitsDone.add(head)
+        print(len(commitsDone))
 
 	for par in head.parents:
-		commitqueue.append(par)
+            if par not in commitsDone:
+		commitqueue.add(par)
 
 	if head.author.name not in nameMap:
 		nameMap[head.author.name] = set()
@@ -84,5 +88,5 @@ while change:
 		identities.append(mergeIds(mergeId1, mergeId2))
 
 for ident in identities:
-	if len(ident[0]) > 1 and len(ident[1]) > 1:
+    if len(ident[0]) > 1:
 		print ident
