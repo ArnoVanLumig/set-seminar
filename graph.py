@@ -1,13 +1,17 @@
 import psycopg2
 import json
 
-reponame = "rails"
+reponame = "rethinkdb"
+
+filenameBlacklist = ["railties/doc/guides%%", "guides/%%", "%%jquery%%js", "%%CHANGELOG%%", "%%README%%", "%%COPYING%%", "%%LICENCE%%", "lib/%%", "external/%%", "bench/workloads/baseline/baseline-git/bench/stress-client/sqlite3.c", "admin/static/js%%", "bench/serializer-bench/lab_journal%%"]
+blacklistQuery = "and".join(map(lambda x: " filename not like '%s' " % x, filenameBlacklist))
 
 query = "select c1.author as deletingAuthor, c2.author as deletedAuthor, count(deletes.id) as count from deletes \
-inner join commits as c1 on deletes.deletingcommit = c1.id \
-inner join commits as c2 on deletes.deletedcommit = c2.id where c2.project = %s \
+inner join commits as c1 on deletes.deletedcommit = c1.id \
+inner join commits as c2 on deletes.deletingcommit = c2.id \
+where c2.project = %s and " + blacklistQuery + " \
 group by c1.author, c2.author \
-having count(deletes.id) > 10 \
+having count(deletes.id) > 1000 \
 order by count desc;"
 
 conn = psycopg2.connect(database="seminar", user="arno", password="seminar", host="127.0.0.1")
@@ -44,7 +48,7 @@ for a1 in range(len(authors)):
 			if (r[0] == auth1 and r[1] == auth2) or (r[1] == auth1 and r[0] == auth2):
 				cnt += r[2]
 
-		if cnt < 300:
+		if cnt < 100:
 			continue
 
 		link = {}

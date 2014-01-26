@@ -103,7 +103,7 @@ def compareCommits(com_a, com_b):
 
 		# get blame info
 		try:
-			blame = repo.blame(rev, difffile)
+			blame = repo.blame(rev, difffile, w=True)
 			expBlame = list(expandBlame(blame))
 		except:
 			continue
@@ -209,67 +209,3 @@ def parseDiff(diff):
 				break
 
 		i += 1
-
-# thediff = """--- a/drivers/python/rethinkdb/_import.py
-# +++ b/drivers/python/rethinkdb/_import.py
-# @@ -329,7 +329,6 @@ def read_json_array(json_data, file_in, callback, progress_info):
-
-#              (obj, offset) = decoder.raw_decode(json_data, idx=offset)
-#              callback(obj)
-# -            progress_info[2].value += 1
-
-#              # Read past whitespace to the next record
-#              file_offset += offset
-# @@ -374,7 +373,6 @@ def json_reader(task_queue, filename, db, table, primary_key, fields, progress_i
-#              json_data = read_json_array(json_data[offset + 1:], file_in, callback, progress_info)
-#          elif json_data[offset] == "{":
-#              json_data = read_json_single_object(json_data[offset:], file_in, callback)
-# -            progress_info[2].value = 1
-#          else:
-#              raise RuntimeError("Error: JSON format not recognized - file does not begin with an object or array")
-
-# @@ -428,7 +426,6 @@ def csv_reader(task_queue, filename, db, table, primary_key, options, progress_i
-#                  if len(obj[key]) == 0:
-#                      del obj[key]
-#              object_callback(obj, db, table, task_queue, object_buffers, buffer_sizes, options["fields"], exit_event)
-# -            progress_info[2].value += 1
-
-#      if len(object_buffers) > 0:
-#          task_queue.put((db, table, object_buffers))
-# @@ -490,7 +487,7 @@ def print_progress(ratio):
-
-#  def update_progress(progress_info):
-#      lowest_completion = 1.0
-# -    for (current, max_count, rows) in progress_info:
-# +    for (current, max_count) in progress_info:
-#          curr_val = current.value
-#          max_val = max_count.value
-#          if curr_val < 0:
-# @@ -529,9 +526,8 @@ def spawn_import_clients(options, files_info):
-#              client_procs[-1].start()
-
-#          for file_info in files_info:
-# -            progress_info.append((multiprocessing.Value(ctypes.c_longlong, -1), # Current lines/bytes processed
-# -                                  multiprocessing.Value(ctypes.c_longlong, 0), # Total lines/bytes to process
-# -                                  multiprocessing.Value(ctypes.c_longlong, 0))) # Total rows processed
-# +            progress_info.append((multiprocessing.Value(ctypes.c_longlong, -1),
-# +                                  multiprocessing.Value(ctypes.c_longlong, 0)))
-#              reader_procs.append(multiprocessing.Process(target=table_reader,
-#                                                          args=(options,
-#                                                                file_info,
-# @@ -564,12 +560,7 @@ def spawn_import_clients(options, files_info):
-#              print_progress(1.0)
-
-#          # Continue past the progress output line
-# -        def plural(num, text):
-# -            return "%d %s%s" % (num, text, "" if num == 1 else "s")
-# -
-#          print ""
-# -        print "%s imported in %s" % (plural(sum([info[2].value for info in progress_info]), "row"),
-# -                                       plural(len(files_info), "table"))
-#      finally:
-#          signal.signal(signal.SIGINT, signal.SIG_DFL)
-# """
-
-# for d in parseDiff(thediff):
-# 	print(d)

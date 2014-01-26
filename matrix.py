@@ -1,10 +1,14 @@
 import psycopg2
 
-reponame = "rails"
+reponame = "rethinkdb"
+
+filenameBlacklist = ["railties/doc/guides%%", "guides/%%", "%%jquery%%js", "%%CHANGELOG%%", "%%README%%", "%%COPYING%%", "%%LICENCE%%", "lib/%%", "external/%%", "bench/workloads/baseline/baseline-git/bench/stress-client/sqlite3.c", "admin/static/js%%", "bench/serializer-bench/lab_journal%%"]
+blacklistQuery = "and".join(map(lambda x: " filename not like '%s' " % x, filenameBlacklist))
 
 query = "select c1.author as deletingAuthor, c2.author as deletedAuthor, count(deletes.id) as count from deletes \
 inner join commits as c1 on deletes.deletedcommit = c1.id \
-inner join commits as c2 on deletes.deletingcommit = c2.id where c2.project = %s \
+inner join commits as c2 on deletes.deletingcommit = c2.id \
+where c2.project = %s and " + blacklistQuery + " \
 group by c1.author, c2.author \
 having count(deletes.id) > 10 \
 order by count desc;"
@@ -43,6 +47,6 @@ for r in res:
 print(";" + ";".join(authors))
 i = 0
 for row in matrix:
-	rowstr = map(lambda x: str(x), row)
+	rowstr = map(lambda x: str(x) if x > 0 else "", row)
 	print(authors[i] + ";" + ";".join(rowstr))
 	i += 1
