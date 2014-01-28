@@ -9,7 +9,7 @@ blacklistQuery = "and".join(map(lambda x: " filename not like '%s' " % x, filena
 query = "select c1.date - c2.date from deletes \
 inner join commits as c1 on deletes.deletingcommit = c1.id \
 inner join commits as c2 on deletes.deletedcommit = c2.id \
-where c2.project = %s and " + blacklistQuery + ";"
+where c2.project = %s" # and " + blacklistQuery + ";"
 
 conn = psycopg2.connect(database="seminar", user="arno", password="seminar", host="127.0.0.1")
 

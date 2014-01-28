@@ -34,7 +34,7 @@ def buildQueue():
 	cur.execute("delete from commits where project = %s;", (reponame,))
 	conn.commit()
 
-        print("deleted old data from db")
+    print("deleted old data from db")
 
 	r.delete("commitsToDo_" + reponame)
 	r.delete("commitsDone_" + reponame)
