@@ -5,7 +5,7 @@ import time
 import psycopg2
 import redis
 
-reponame = "rethinkdb"
+reponame = "reddit"
 
 conn = psycopg2.connect(database="seminar", user="arno", password="seminar", host="127.0.0.1")
 r = redis.StrictRedis(host='127.0.0.1', port=6379, db=0)
@@ -91,13 +91,13 @@ def compareCommits(com_a, com_b):
 	rev = com_a.hexsha
 
 	for diff in diffs:
-		if diff.a_blob == None or diff.b_blob == None:
-			# new file or deleted file, ignore
-			continue
+		if diff.a_blob == None and diff.b_blob == None:
+		    # not sure why this sometimes happens, ignore
+		    continue
 
 		# extract and parse the diff text
 		difftxt = diff.diff
-		difffile = diff.a_blob.path
+		difffile = (diff.a_blob or diff.b_blob).path
 
 		parsedDiff = list(parseDiff(difftxt))
 
